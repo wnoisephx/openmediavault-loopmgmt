@@ -1,0 +1,11 @@
+Source: openmediavault-loopmgmt
+Section: misc
+Priority: optional
+Maintainer: William Ritchie <billr@domsys.com>
+Build-Depends: debhelper (>= 4)
+Standards-Version: 3.6.2
+
+Package: openmediavault-loopmgmt
+Architecture: all
+Depends: openmediavault
+Description: Adds loop device management to OpenMediaVault

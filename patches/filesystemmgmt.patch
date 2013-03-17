@@ -1,0 +1,17 @@
+--- /var/www/openmediavault/rpc/filesystemmgmt.inc	2013-02-16 21:08:03.000000000 -0500
++++ filesystemmgmt.inc	2013-03-09 21:51:41.000000000 -0500
+@@ -669,9 +669,13 @@
+ 			$fsName = $fs->getUuid();
+ 			$opts = $GLOBALS['OMV_FSTAB_MNTOPS_HFSPLUS'];
+ 			break;
++		case "iso9660":
++			$fsName = $fs->getDeviceFileByUuid();
++			$opts = "";
++			break;
+ 		default:
+ 			throw new OMVException(OMVErrorMsg::E_MISC_FAILURE, sprintf(
+-			  gettext("Filesystem '%s' not supported"), $type));
++			  gettext("Filesystem '%s' not supported"), $fs->getType()));
+ 			break;
+ 		}
+ 		// Create fstab entry?

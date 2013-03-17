@@ -1,0 +1,9 @@
+Package: openmediavault-loopmgmt
+Version: 0.2a
+Architecture: all
+Maintainer: William Ritchie <billr@domsys.com>
+Installed-Size: 132
+Depends: openmediavault
+Section: misc
+Priority: optional
+Description: Adds loop device management to OpenMediaVault

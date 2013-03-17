@@ -1,0 +1,9 @@
+openmediavault-loopmgmt (0.2a) unstable; urgency=low
+
+  * New loop images are created as sparse files (much faster)
+  * Trying to create file systems on loop devices failed
+  * Properly fills in information in Physical Disks Panel
+  * Now comes as a .deb file make it easier to install
+  * Other minor bug fixes
+
+ -- William Ritchie <billr@domsys.com>  Sat, 16 Mar 2013 22:31:25 -0400
