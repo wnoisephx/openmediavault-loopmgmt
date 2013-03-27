@@ -1,0 +1,12 @@
+--- /var/www/openmediavault/js/omv/module/admin/Loop.js	2013-03-25 10:02:48.000000000 -0400
++++ /var/www/openmediavault.devel/js/omv/module/admin/Loop.js	2013-03-24 21:42:46.000000000 -0400
+@@ -202,8 +202,7 @@
+ 
+                                 // Execute RPC
+ 		                OMV.Ajax.request(this.cbLoopCallBack, this, "loopmgmt", "detach",
+-                  			{ "image": record.get("image") ,
+-                  			"devicefile": record.get("devicefile") });
++                  			{ "devicefile": record.get("devicefile") });
+ 			},
+                         scope: this,
+                         icon: Ext.Msg.QUESTION

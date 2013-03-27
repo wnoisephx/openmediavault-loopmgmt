@@ -1,0 +1,250 @@
+--- /usr/share/php/openmediavault/system.inc	2013-02-16 21:08:03.000000000 -0500
++++ /usr/share/php/openmediavault.devel/system.inc	2013-03-27 13:20:47.736437115 -0400
+@@ -23,6 +23,7 @@
+ require_once("openmediavault/object.inc");
+ require_once("openmediavault/functions.inc");
+ require_once("openmediavault/util.inc");
++require_once("openmediavault/loop.inc");
+ 
+ /**
+  * @class OMVSystem
+@@ -440,7 +441,7 @@
+ 			//   /dev/mapper which is prefered.
+ 			$cmd = sprintf("export LANG=C; sudo findfs UUID=%s", $this->uuid);
+ 			@OMVUtil::exec($cmd, $output, $result);
+-			if($result !== 0)
++			if($result !== 0) 
+ 				return FALSE;
+ 			$this->deviceFile = $output[0];
+ 			unset($output);
+@@ -492,6 +493,10 @@
+ 		$this->ptType = $data['pttype'];
+ 		$this->usage = $data['usage'];
+ 
++		// fix filesystems that don't have UUID's iso9660???
++		if(!$this->uuid && $this->type == "iso9660") 
++			$this->uuid=makeUuid(md5($this->label));
++
+ 		// Set flag to mark informations has been successfully read.
+ 		$this->dataCached = TRUE;
+ 
+@@ -610,7 +615,7 @@
+ 			  $GLOBALS['OMV_REGEX_DEVNAME_HARDDISK'] => "/(\d+)$/",
+ 			  $GLOBALS['OMV_REGEX_DEVNAME_SOFTWARERAID'] => "//",
+ 			  $GLOBALS['OMV_REGEX_DEVNAME_HARDWARERAID'] => "/(p\d+)$/",
+-			  $GLOBALS['OMV_REGEX_DEVNAME_DEVICEMAPPER'] => "//"
++			  $GLOBALS['OMV_REGEX_DEVNAME_DEVICEMAPPER'] => "//mapper//"
+ 		  );
+ 		$storageDeviceFile = FALSE;
+ 		$deviceFile = $this->getDeviceFile();
+@@ -882,6 +887,7 @@
+ 	protected $model = FALSE;
+ 	protected $vendor = FALSE;
+ 	protected $udevInfo = FALSE;
++	protected $serial = FALSE;
+ 
+ 	/**
+ 	 * Constructor
+@@ -973,12 +979,19 @@
+ 	 */
+ 	public function getModel() {
+ 		if($this->model === FALSE) {
+-			$filename = sprintf("/sys/block/%s/device/model",
+-			  $this->getDeviceName());
+-			if(file_exists($filename)) {
+-				$this->model = trim(file_get_contents($filename));
++			if(!strncmp($this->getDeviceName(),"loop",4)) {
++				$loop = new OMVLoopDevice($this->deviceFile);
++				$this->model=$loop->getName();
++				$this->vendor="Loop Device";
++				$this->serial=$loop->getSerial();
+ 			} else {
+-				$this->model = "";
++				$filename = sprintf("/sys/block/%s/device/model",
++				  $this->getDeviceName());
++				if(file_exists($filename)) {
++					$this->model = trim(file_get_contents($filename));
++				} else {
++					$this->model = "";
++				}
+ 			}
+ 		}
+ 		return $this->model;
+@@ -990,12 +1003,16 @@
+ 	 */
+ 	public function getVendor() {
+ 		if($this->vendor === FALSE) {
+-			$filename = sprintf("/sys/block/%s/device/vendor",
+-			  $this->getDeviceName());
+-			if(file_exists($filename)) {
+-				$this->vendor = trim(file_get_contents($filename));
++			if(!strncmp($this->getDeviceName(),"loop",4)) {
++				$this->vendor = "Loop Device";
+ 			} else {
+-				$this->vendor = "";
++				$filename = sprintf("/sys/block/%s/device/vendor",
++				  $this->getDeviceName());
++				if(file_exists($filename)) {
++					$this->vendor = trim(file_get_contents($filename));
++				} else {
++					$this->vendor = "";
++				}
+ 			}
+ 		}
+ 		return $this->vendor;
+@@ -1006,9 +1023,12 @@
+ 	 * @return The device serial number.
+ 	 */
+ 	public function getSerialNumber() {
+-		if(FALSE === ($property = $this->getUdevProperty("ID_SERIAL_SHORT")))
+-			return "n/a";
+-		return str_replace("_", " ", $property);
++		if($this->serial === FALSE) {
++			if(FALSE === ($property = $this->getUdevProperty("ID_SERIAL_SHORT")))
++				return "n/a";
++			return str_replace("_", " ", $property);
++		}
++		return $this->serial;
+ 	}
+ 
+ 	/**
+@@ -1146,7 +1166,8 @@
+ 	const HARDDISK = 0x1;
+ 	const SOFTWARERAID = 0x2;
+ 	const HARDWARERAID = 0x4;
+-	const ALL = 0x7;
++	const DEVICEMAPPER = 0x8;
++	const ALL = 0xf;
+ 
+ 	/**
+ 	 * Enumerate devices matching the given type.
+@@ -1163,6 +1184,8 @@
+ 			$args[] = $GLOBALS['OMV_REGEX_DEVNAME_SOFTWARERAID'];
+ 		if ($type & OMVStorageDevices::HARDWARERAID)
+ 			$args[] = $GLOBALS['OMV_REGEX_DEVNAME_HARDWARERAID'];
++		if ($type & OMVStorageDevices::DEVICEMAPPER)
++			$args[] = $GLOBALS['OMV_REGEX_DEVNAME_DEVICEMAPPER'];
+ 		$regex = sprintf("/^\s+(\d+)\s+(\d+)\s+(\d+)\s+(%s)$/",
+ 		  implode("|", $args));
+ 		// List partitions detected by the kernel.
+@@ -1176,7 +1199,19 @@
+ 		foreach ($output as $outputk => $outputv) {
+ 			if (1 !== preg_match($regex, $outputv, $matches))
+ 				continue;
+-			$devs[] = sprintf("/dev/%s", $matches[4]);
++
++			// if it is a device mapper file (dm-0) get the real device file (/dev/mapper)
++			if (1 === preg_match("(dm-\d+)",$matches[4])) {
++				$cmd = sprintf("sudo ls -l /dev/mapper/ | grep %s | awk {'print $9'}",$matches[4]);
++				@OMVUtil::exec($cmd, $out, $result);
++				if ($result !== 0) {
++					return FALSE;
++				}
++				$devs[] = sprintf("/dev/mapper/%s",$out[0]);
++				unset($out);
++			} else {
++				$devs[] = sprintf("/dev/%s", $matches[4]);
++			}
+ 		}
+ 		return $devs;
+ 	}
+@@ -1742,15 +1777,6 @@
+ }
+ 
+ /**
+- * This class provides a simple interface to handle device-mapper devices.
+- * See http://en.wikipedia.org/wiki/Device_mapper for more details.
+- * @ingroup api
+- */
+-class OMVDeviceMapperDevice extends OMVStorageDeviceAbstract {
+-	// Nothing to do here.
+-}
+-
+-/**
+  * @class OMVNetwork
+  * @extends OMVObject
+  */
+@@ -2765,4 +2791,83 @@
+ 		  binary_format($this->getSize()));
+ 	}
+ }
++
++/**
++ * This class provides a simple interface to handle device-mapper devices.
++ * See http://en.wikipedia.org/wiki/Device_mapper for more details.
++ * @ingroup api
++ */
++class OMVDeviceMapperDevice extends OMVStorageDeviceAbstract {
++        protected $name = "";
++	protected $devicefile = "";
++	protected $parent = "";
++        protected $uuid = FALSE;
++        private $dataCached = FALSE;
++
++	// file the data structures
++        private function getData() {
++                if ($this->dataCached !== FALSE)
++                        return TRUE;
++
++		// devicemapper is controlled by dmsetup
++		// dmsetup  -c --noheadings info /dev/mapper/loop0p3
++		//    loop0p3:253:2:L--w:0:1:0:part3-loop0
++                $cmd = sprintf("export LANG=C; sudo dmsetup -c --noheadings info %s", 
++			escapeshellarg($this->getDeviceFile()));
++                @OMVUtil::exec($cmd, $output, $result);
++                if ($result !== 0)
++                        return FALSE;
++
++		// we got some info so explode it
++		$data = explode(":",$output[0]);
++		$this->name = $data[0];
++		$this->uuid = makeUuid(md5($data[7]));
++		$this->devicefile = "/dev/mapper/" . $this->name;
++		$this->dataCached = TRUE;
++		return TRUE;
++	}
++
++	// does it exist
++	// if getData returns true then yes it exists
++	public function exists() {
++                if ($this->getData() === FALSE)
++                        return FALSE;
++                return TRUE;
++        }
++
++        // Get the UUID
++        public function getUuid() {
++                if ($this->getData() === FALSE)
++                        return FALSE;
++                return $this->uuid;
++        }
++
++	// get the name of device
++        public function getName() {
++                if ($this->getData() === FALSE)
++                        return FALSE;
++                return $this->name;
++        }
++
++	// get a Description so we can identify it
++        public function getDescription() {
++                if ($this->getData() === FALSE)
++                        return FALSE;
++                return sprintf("DM %s on %s", $this->getName(),"");
++        }
++
++	// get Parent
++	public function getParent() {
++                if ($this->getData() === FALSE)
++                        return FALSE;
++
++//		if(1 == preg_match("/^{$confk}(\d+|p\d+)?$/i", $deviceName)) {
++		return $this->parent;
++	}
++
++	// return the device file
++	public function getDeviceFile() {
++		return $this->deviceFile;
++	}
++}
+ ?>

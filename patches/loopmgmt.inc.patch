@@ -1,0 +1,35 @@
+--- /var/www/openmediavault/rpc/loopmgmt.inc	2013-03-25 10:11:09.000000000 -0400
++++ /var/www/openmediavault.devel/rpc/loopmgmt.inc	2013-03-24 21:42:46.000000000 -0400
+@@ -63,7 +63,6 @@
+ 			"detach" => array('{
+ 				"type":"object",
+ 				"properties":{
+-					"image":{'.$GLOBALS['OMV_JSONSCHEMA_DEVICEFILE'].'}
+ 					"devicefile":{'.$GLOBALS['OMV_JSONSCHEMA_DEVICEFILE'].'}
+ 				}
+ 			}'),
+@@ -201,24 +200,6 @@
+ 		// Validate method parameters
+ //		$this->validateParams(__METHOD__, func_get_args());
+ 
+-		// what kind of image is it?
+-		$cmd = sprintf("export LANG=C; sudo /usr/local/bin/fsimgtype.sh %s", $data['image']);
+-                @OMVUtil::exec($cmd, $output, $imgtype);
+-                if ($imgtype == 0) {
+-			// we don't do things that we don't know what they are
+-                        return FALSE;
+-		}
+-
+-		// if it's a disk image run kpartx on it
+-		if($imgtype == 1) {
+-                	$cmd = sprintf("export LANG=C; sudo kpartx -d %s", $data['devicefile']);
+-                	@OMVUtil::exec($cmd, $output, $result);
+-                	if ($result !== 0) {
+-                       		// oops it didn't work
+-                        	return FALSE;
+-			}
+-		}
+-
+ 		// try and detach the image
+                 $cmd = sprintf("export LANG=C; sudo losetup --detach %s", $data['devicefile']);
+                 @OMVUtil::exec($cmd, $output, $result);

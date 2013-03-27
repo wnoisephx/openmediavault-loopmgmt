@@ -1,0 +1,20 @@
+--- /usr/share/php/openmediavault/functions.inc	2013-02-16 21:08:03.000000000 -0500
++++ /usr/share/php/openmediavault.devel/functions.inc	2013-03-26 16:42:10.108471107 -0400
+@@ -280,4 +280,17 @@
+ 		return FALSE;
+ 	return $dt->getTimestamp();
+ }
++
++/**
++  * take a string (normally an md5 hash) and convert it to a uuid
++  * @param string The string to convert
++  * @return Returns a string in uuid format
++  */
++function makeUuid($string) {
++        return substr($string,0,8) . "-" . substr($string,8,4) . "-" . substr($string,12,4) . "-" .
++                substr($string,16,4) . "-" .substr($string,20);
++}
++
+ ?>
++
++

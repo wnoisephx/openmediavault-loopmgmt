@@ -1,0 +1,76 @@
+--- /var/www/openmediavault/rpc/filesystemmgmt.inc	2013-02-16 21:08:03.000000000 -0500
++++ /var/www/openmediavault.devel/rpc/filesystemmgmt.inc	2013-03-26 15:13:10.320456412 -0400
+@@ -65,6 +65,7 @@
+ 				"type":"object",
+ 				"properties":{
+ 					"id":{'.$GLOBALS['OMV_JSONSCHEMA_FILESYSTEM_UUID'].'},
++					"devicefile":{'.$GLOBALS['OMV_JSONSCHEMA_DEVICEFILE'].'},
+ 					"fstab":{"type":"boolean"}
+ 				}
+ 			}'),
+@@ -623,7 +624,7 @@
+ 	 * @return None
+ 	 */
+ 	public function mount($data) {
+-//		$this->debug(var_export(func_get_args(), TRUE));
++		$this->debug(var_export(func_get_args(), TRUE));
+ 		global $xmlConfig;
+ 		// Check permissions
+ 		$this->validateSession();
+@@ -632,12 +633,12 @@
+ 		}
+ 		$this->commitSession();
+ 		// Validate method parameters
+-		$this->validateParams(__METHOD__, func_get_args());
++//		$this->validateParams(__METHOD__, func_get_args());
+ 		// Get the filesystem.
+-		$fs = new OMVFilesystem($data['id']);
++		$fs = new OMVFilesystem($data['devicefile']);
+ 		if (!$fs->exists()) {
+ 			throw new OMVException(OMVErrorMsg::E_MISC_FAILURE,
+-			  sprintf(gettext("Filesystem '%s' not found"), $data['id']));
++			  sprintf(gettext("Filesystem '%s' on %s not found"),$data['id'],$data['devicefile']));
+ 		}
+ 		// Get mount options depending on the filesystem type.
+ 		switch ($fs->getType()) {
+@@ -669,11 +670,16 @@
+ 			$fsName = $fs->getUuid();
+ 			$opts = $GLOBALS['OMV_FSTAB_MNTOPS_HFSPLUS'];
+ 			break;
++		case "iso9660":
++			$fsName = $data['devicefile'];
++			$opts = "";
++			break;
+ 		default:
+ 			throw new OMVException(OMVErrorMsg::E_MISC_FAILURE, sprintf(
+-			  gettext("Filesystem '%s' not supported"), $type));
++			  gettext("Filesystem '%s' not supported"), $fs->getType()));
+ 			break;
+ 		}
++
+ 		// Create fstab entry?
+ 		if (TRUE === boolval($data['fstab'])) {
+ 			// Check for duplicates.
+@@ -708,8 +714,11 @@
+ 			  "org.openmediavault.system.fstab.mntent", $object);
+ 		}
+ 		// Mount the filesystem.
+-		$cmd = sprintf("sudo mount %s", is_uuid($fsName) ? "-U {$fsName}" :
+-		  $fsName);
++		if(is_uuid($fsName)) {
++               		$cmd = sprintf("sudo mount %s", is_uuid($fsName) ? "-U {$fsName}" : $fsName);
++		} else {	
++			$cmd = sprintf("sudo mount -t %s %s %s", $fs->getType(),$data['devicefile'],$object['dir']);
++		}
+ 		OMVUtil::exec($cmd, $output, $result);
+ 		if ($result !== 0) {
+ 			throw new OMVException(OMVErrorMsg::E_EXEC_FAILED,
+@@ -735,7 +744,7 @@
+ 		}
+ 		$this->commitSession();
+ 		// Validate method parameters
+-		$this->validateParams(__METHOD__, func_get_args());
++//		$this->validateParams(__METHOD__, func_get_args());
+ 		// Remove fstab entry?
+ 		if (TRUE === boolval($data['fstab'])) {
+ 			// Get the configuration object.
