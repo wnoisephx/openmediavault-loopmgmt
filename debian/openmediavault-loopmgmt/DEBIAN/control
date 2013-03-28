@@ -1,8 +1,8 @@
 Package: openmediavault-loopmgmt
-Version: 0.2a
+Version: 0.3a
 Architecture: all
 Maintainer: William Ritchie <billr@domsys.com>
-Installed-Size: 132
+Installed-Size: 136
 Depends: openmediavault
 Section: misc
 Priority: optional

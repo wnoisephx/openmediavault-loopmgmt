@@ -1,10 +1,11 @@
 147f9e3ef47b09d464b6df5df0fb241d  usr/share/doc/openmediavault-loopmgmt/README.Debian
-8ebd30ba7e1e9249e221d17dc0889e73  usr/share/doc/openmediavault-loopmgmt/changelog.gz
+f97bca9f3ff0e7e5148528b077e40a41  usr/share/doc/openmediavault-loopmgmt/changelog.gz
 a0468ba93fe3061fba60b03ac369bec9  usr/share/doc/openmediavault-loopmgmt/copyright
 a0c5e777ace56d69a2d73c0e680cf01d  usr/share/php/openmediavault/loop.inc
 8477f06494264ae7441f32709223ff8b  var/www/openmediavault/js/omv/module/admin/Loop.js
 b18f60192e4f8f3731c7b973274f27c1  var/www/openmediavault/module/loopmgmt.inc
-51ed25e82a66cb13e9c3068b08f5f02b  var/www/openmediavault/rpc/loopmgmt.inc
-2e8f6fe52e82a6417fe597ed79ae4940  var/www/patches/filesystemmgmt.patch
-594b40dbe1a07a9e3f90bc7921df111b  var/www/patches/global.patch
-b74328804021db269d9ecddb856d449b  var/www/patches/system.patch
+82cf0d58a6a9de120fda95244baf49d2  var/www/openmediavault/rpc/loopmgmt.inc
+b48f1d1f512961a527ed208326351a73  var/www/patches/FileSystemMgmt.js.patch
+9d48292f6cd7b3880c151f8c8f26c9cd  var/www/patches/filesystemmgmt.inc.patch
+0aaf13b554ad6dc4bbb9c35af626d1e6  var/www/patches/globals.inc.patch
+4fe6201c2cbf65cd48a6ffdc4874b729  var/www/patches/system.inc.patch

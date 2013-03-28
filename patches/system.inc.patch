@@ -1,5 +1,5 @@
 --- /usr/share/php/openmediavault/system.inc	2013-02-16 21:08:03.000000000 -0500
-+++ /usr/share/php/openmediavault.devel/system.inc	2013-03-27 13:20:47.736437115 -0400
++++ /usr/share/php/openmediavault.devel/system.inc	2013-03-27 22:02:47.408448736 -0400
 @@ -23,6 +23,7 @@
  require_once("openmediavault/object.inc");
  require_once("openmediavault/functions.inc");
@@ -164,7 +164,7 @@
   * @class OMVNetwork
   * @extends OMVObject
   */
-@@ -2765,4 +2791,83 @@
+@@ -2765,4 +2791,109 @@
  		  binary_format($this->getSize()));
  	}
  }
@@ -177,8 +177,10 @@
 +class OMVDeviceMapperDevice extends OMVStorageDeviceAbstract {
 +        protected $name = "";
 +	protected $devicefile = "";
-+	protected $parent = "";
++	protected $parentName = "";
++	protected $parentDevice = "";
 +        protected $uuid = FALSE;
++	protected $size = FALSE;
 +        private $dataCached = FALSE;
 +
 +	// file the data structures
@@ -200,6 +202,31 @@
 +		$this->name = $data[0];
 +		$this->uuid = makeUuid(md5($data[7]));
 +		$this->devicefile = "/dev/mapper/" . $this->name;
++
++		// check loop0p1, etc 
++		if(1 == preg_match("/loop\d+/",$this->deviceFile,$matches)) {
++			$this->parentDevice = "/dev/" . $matches[0];
++			$loop = new OMVLoopDevice($this->parentDevice);
++			$this->parentName = $loop->getImageName();
++			$type = $loop->getType();
++			$this->size = $loop->getSize();
++
++			// disk image?
++			// 1:17408B:2000000511B:1999983104B::Root:boot;
++			// 2:2000683008B:2100297727B:99614720B::linux-swap:;
++			// 3:2100297728B:9999220735B:7898923008B::Home:;
++			if($type==1) {
++				unset($data,$output,$result);
++				$cmd = sprintf("export LANG=C; sudo parted -m %s unit b print",$this->parentDevice);
++                		@OMVUtil::exec($cmd, $output, $result);
++                		if ($result !== 0)
++                        		return FALSE;
++				$idx = substr($this->devicefile,-1) + 1;
++				$data = explode(":",$output[$idx]);
++				$this->size = substr($data[3], 0, -1);
++				$this->name = $data[5];
++			}
++		}
 +		$this->dataCached = TRUE;
 +		return TRUE;
 +	}
@@ -230,15 +257,14 @@
 +        public function getDescription() {
 +                if ($this->getData() === FALSE)
 +                        return FALSE;
-+                return sprintf("DM %s on %s", $this->getName(),"");
++                return sprintf("%s on %s [%s, %s]", 
++			$this->name, $this->parentName,$this->parentDevice,binary_format($this->size));
 +        }
 +
 +	// get Parent
-+	public function getParent() {
++	public function getParentName() {
 +                if ($this->getData() === FALSE)
 +                        return FALSE;
-+
-+//		if(1 == preg_match("/^{$confk}(\d+|p\d+)?$/i", $deviceName)) {
 +		return $this->parent;
 +	}
 +

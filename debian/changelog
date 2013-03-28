@@ -1,9 +1,13 @@
-openmediavault-loopmgmt (0.2a) unstable; urgency=low
+openmediavault-loopmgmt (0.3a) unstable; urgency=low
 
+  [ William Ritchie ]
   * New loop images are created as sparse files (much faster)
   * Trying to create file systems on loop devices failed
   * Properly fills in information in Physical Disks Panel
   * Now comes as a .deb file make it easier to install
   * Other minor bug fixes
 
- -- William Ritchie <billr@domsys.com>  Sat, 16 Mar 2013 22:31:25 -0400
+  [ William Ritchie ]
+  * fixed mount/unmounting of iso9660 images
+
+ -- William Ritchie <billr@domsys.com>  Sun, 24 Mar 2013 21:49:42 -0400

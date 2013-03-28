@@ -137,7 +137,7 @@ class LoopMgmtRpc extends OMVRpc {
 	 * Attach an image to a loop device.
 	 */
 	public function attach($data) {
-		$this->debug(var_export(func_get_args(), TRUE));
+//		$this->debug(var_export(func_get_args(), TRUE));
 		global $xmlConfig;
 		// Check permissions
 		$this->validateSession();
@@ -153,11 +153,31 @@ class LoopMgmtRpc extends OMVRpc {
 			 throw new OMVException(OMVErrorMsg::E_RPC_SERVICE_FILE_NOT_FOUND,$data['image']);
 		}
 
+		// what kind of image is it?
+		$cmd = sprintf("export LANG=C; sudo /usr/local/bin/fsimgtype.sh %s", $data['image']);
+                @OMVUtil::exec($cmd, $output, $imgtype);
+                if ($imgtype == 0) {
+			// we don't do things that we don't know what they are
+                        return FALSE;
+		}
+
 		// try and attach the image
                 $cmd = sprintf("export LANG=C; sudo losetup --find %s", $data['image']);
                 @OMVUtil::exec($cmd, $output, $result);
-                if ($result !== 0)
+                if ($result !== 0) {
+			// oops it didn't work
                         return FALSE;
+		} 
+
+		// if it's a disk image run kpartx on it
+		if($imgtype == 1) {
+                	$cmd = sprintf("export LANG=C; sudo kpartx -a %s", $data['image']);
+                	@OMVUtil::exec($cmd, $output, $result);
+                	if ($result !== 0) {
+                       		// oops it didn't work
+                        	return FALSE;
+			}
+		}
 
 		// Notify configuration changes
 		$dispatcher = &OMVNotifyDispatcher::getInstance();
@@ -169,7 +189,7 @@ class LoopMgmtRpc extends OMVRpc {
 	 * Detach an image from a loop device.
 	 */
 	public function detach($data) {
-		$this->debug(var_export(func_get_args(), TRUE));
+//		$this->debug(var_export(func_get_args(), TRUE));
 		global $xmlConfig;
 		// Check permissions
 		$this->validateSession();
@@ -183,8 +203,9 @@ class LoopMgmtRpc extends OMVRpc {
 		// try and detach the image
                 $cmd = sprintf("export LANG=C; sudo losetup --detach %s", $data['devicefile']);
                 @OMVUtil::exec($cmd, $output, $result);
-                if ($result !== 0)
+                if ($result !== 0) {
                         return FALSE;
+		}
 
 		// Notify configuration changes.
 		$dispatcher = &OMVNotifyDispatcher::getInstance();

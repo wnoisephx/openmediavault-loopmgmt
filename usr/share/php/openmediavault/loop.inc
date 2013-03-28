@@ -36,7 +36,11 @@ class OMVLoopDevice extends OMVObject {
 	protected $name = "";
 	protected $size = "";
 	protected $image = "";
+	protected $imageName = "";
 	protected $serial = "";
+	protected $type = "";
+	protected $typeName = "";
+	protected $typeEnum = array("Unknown","Disk Image","Filesystem Image","CD/DVD Image");
 	private $dataCached = FALSE;
 
 	/**
@@ -90,6 +94,14 @@ class OMVLoopDevice extends OMVObject {
 		$tst = explode("/",$this->image);
 		$this->name = $tst[sizeof($tst)-1];
 		$this->serial = md5($this->name);
+		$this->imageName = basename($this->image);
+		
+		// get the image type
+		unset($out);
+		$cmd = sprintf("sudo fsimgtype.sh %s",$this->image);
+	        @OMVUtil::exec($cmd, $out, $result);
+		$this->type=$result;
+		$this->typeName = $this->typeEnum[$this->type];
 
 		// get the size of the image that this device is pointing to
 		unset($out);
@@ -100,15 +112,14 @@ class OMVLoopDevice extends OMVObject {
 		$tst = explode("/",$out[0]);
 		$this->size = $tst[0];
 
-		// Set flag to mark informations has been successfully read.
+		// Set flag to mark information has been successfully read.
 		$this->dataCached = TRUE;
 
 		return TRUE;
 	}
 
 	/**
-	 * Refresh the cached informations.
-	 * @return TRUE if successful, otherwise FALSE.
+	 * Refresh the cached information.
 	 */
 	public function refresh() {
 		$this->dataCached = FALSE;
@@ -158,6 +169,13 @@ class OMVLoopDevice extends OMVObject {
 		return $this->image;
 	}
 
+	// get the Image Name sans any path info
+	public function getImageName() {
+		if ($this->getData() === FALSE)
+			return FALSE;
+		return $this->imageName;
+	}
+
         /**
          * Get the imagename sans any path info
          * @param deviceFile  The device file, e.g. /dev/loop0
@@ -173,6 +191,13 @@ class OMVLoopDevice extends OMVObject {
 		if($this->getData() === FALSE)
 			return FALSE;
 		return $this->serial;
+	}
+
+	// returen what type of image this is
+	public function getType() {
+		if ($this->getData() === FALSE)
+			return FALSE;
+		return $this->type;
 	}
 }
 
