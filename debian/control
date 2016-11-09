@@ -7,5 +7,5 @@ Standards-Version: 3.6.2
 
 Package: openmediavault-loopmgmt
 Architecture: all
-Depends: openmediavault
+Depends: openmediavault, patch
 Description: Adds loop device management to OpenMediaVault
